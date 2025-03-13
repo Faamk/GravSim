@@ -4,6 +4,7 @@ from grav_sim.src.config import settings
 from grav_sim.src.config.settings import WindowConfig, PhysicsConfig
 from grav_sim.src.core.physics.physics import PhysicsEngine
 from grav_sim.src.core.physics.utils import create_default_entities
+from grav_sim.src.graphics.camera import Camera
 from grav_sim.src.graphics.renderer import Renderer
 from grav_sim.src.input.keyboard_handler import KeyboardHandler
 from grav_sim.src.input.mouse_handler import MouseHandler
@@ -14,12 +15,12 @@ class Game:
         pygame.init()
         self.entities = create_default_entities()
         self.timescale = PhysicsConfig.DEFAULT_TIME_SCALE
-        self.focused_entity = 0
         self.screen = pygame.display.set_mode((WindowConfig.WIDTH, WindowConfig.HEIGHT))
         pygame.display.set_caption("Gravity Simulator")
 
         self.physics = PhysicsEngine(self.entities)
-        self.renderer = Renderer()
+        self.camera = Camera(entity_to_track=self.entities[0])
+        self.renderer = Renderer(camera=self.camera)
         self.mouse_handler = MouseHandler()
         self.keyboard_handler = KeyboardHandler(
             entities=self.physics.entities,
@@ -61,6 +62,7 @@ class Game:
 
     def update(self):
         self.physics.update(self.keyboard_handler.current_time_scale)
+        self.camera.update()
 
     def render(self):
         self.screen.fill((255, 255, 255))

@@ -9,11 +9,11 @@ from grav_sim.src.graphics.camera import Camera
 
 
 class Renderer:
-    def __init__(self):
+    def __init__(self, camera):
         self.font = pygame.font.Font(None, 24)
         self.BASE_ARROW_LENGTH = 20
         self.VELOCITY_SCALE = 100
-        self.camera = Camera()
+        self.camera = camera
 
         # Create layers for different rendering purposes
         self.entity_group = pygame.sprite.Group()

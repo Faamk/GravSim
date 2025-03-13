@@ -1,63 +1,44 @@
+import pygame
 from pygame.math import Vector2
 from grav_sim.src.config.settings import WindowConfig, BoardConfig
+from grav_sim.src.core.entity.entity import Entity
 
 
 class Camera:
-    def __init__(self):
+    def __init__(self, entity_to_track):
         self.zoom_level = 1.0
         self.min_zoom = 0.01
         self.max_zoom = 10.0
 
-        # Calculate the visible area
-        self.viewport_width = WindowConfig.WIDTH
-        self.viewport_height = WindowConfig.HEIGHT
+        self.viewport = pygame.Rect(0, 0, WindowConfig.WIDTH, WindowConfig.HEIGHT)
+        self.entity_to_track: Entity = entity_to_track
 
-        # Initialize position at board center
-        self.position = Vector2(
-            BoardConfig.WIDTH / 2,
-            BoardConfig.HEIGHT / 2
-        )
+        self.position = Vector2(BoardConfig.WIDTH / 2, BoardConfig.HEIGHT / 2)
 
-    def focus_on(self, x: float, y: float) -> None:
-        """Center the camera on specific world coordinates"""
-        self.position = Vector2(x, y)
+    def focus_on(self, x: float, y: float, alpha=0.1) -> None:
+        target_pos = Vector2(x, y)
+        self.position = self.position.lerp(target_pos, alpha)
 
     def zoom(self, zoom_in: bool) -> None:
-        if zoom_in:
-            self.zoom_level = max(self.min_zoom, self.zoom_level * 0.9)
-        else:
-            self.zoom_level = min(self.max_zoom, self.zoom_level * 1.1)
+        factor = 0.9 if zoom_in else 1.1
+        self.zoom_level = max(self.min_zoom, min(self.max_zoom, self.zoom_level * factor))
 
     def world_to_screen_pos(self, world_pos: Vector2) -> Vector2:
-        """Convert world coordinates to screen coordinates"""
-        # Calculate position relative to the camera's focus point
         relative_to_center = world_pos - self.position
-
-        # Scale by zoom and center in viewport
-        # Use round() to prevent subpixel jitter at high zoom levels
-        screen_pos = Vector2(
-            round((relative_to_center.x * self.zoom_level) + (self.viewport_width / 2)),
-            round((relative_to_center.y * self.zoom_level) + (self.viewport_height / 2))
-        )
+        screen_pos = (relative_to_center.elementwise() * self.zoom_level) + Vector2(self.viewport.width / 2,
+                                                                                    self.viewport.height / 2)
         return screen_pos
 
     def screen_to_world_pos(self, screen_pos: Vector2) -> Vector2:
-        """Convert screen coordinates to world coordinates"""
-        # Calculate position relative to viewport center
-        relative_to_center = Vector2(
-            screen_pos.x - (self.viewport_width / 2),
-            screen_pos.y - (self.viewport_height / 2)
-        )
-
-        # Scale by inverse zoom and add board center
-        world_pos = Vector2(
-            (relative_to_center.x / self.zoom_level) + self.position.x,
-            (relative_to_center.y / self.zoom_level) + self.position.y
-        )
+        relative_to_center = screen_pos - Vector2(self.viewport.width / 2, self.viewport.height / 2)
+        world_pos = (relative_to_center / self.zoom_level) + self.position
         return world_pos
 
     def get_visible_area(self) -> tuple[Vector2, Vector2]:
-        """Return the visible area in world coordinates (top_left, bottom_right)"""
         top_left = self.screen_to_world_pos(Vector2(0, 0))
-        bottom_right = self.screen_to_world_pos(Vector2(self.viewport_width, self.viewport_height))
+        bottom_right = self.screen_to_world_pos(Vector2(self.viewport.width, self.viewport.height))
         return top_left, bottom_right
+
+    def update(self):
+        if self.entity_to_track:
+            self.focus_on(self.entity_to_track.position.x, self.entity_to_track.position.y, alpha=0.2)

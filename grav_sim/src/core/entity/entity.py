@@ -5,6 +5,12 @@ from pygame.math import Vector2
 import pygame
 import math
 
+import pygame
+from pygame.math import Vector2
+from dataclasses import dataclass, field
+import random
+import string
+
 
 @dataclass(eq=False)
 class Entity(pygame.sprite.Sprite):
@@ -14,10 +20,11 @@ class Entity(pygame.sprite.Sprite):
     velocity: float = 0
     direction: float = 0
     color: tuple = (255, 0, 0)
+    name: str = field(default_factory=lambda: ''.join(random.choices(string.ascii_letters + string.digits, k=8)))
 
     def __init__(self, position: Vector2, density: float, mass: float,
                  velocity: float = 0, direction: float = 0,
-                 color: tuple = (255, 0, 0)):
+                 color: tuple = (255, 0, 0), name: str = None):
         super().__init__()
         self.position = position
         self.density = density
@@ -25,7 +32,15 @@ class Entity(pygame.sprite.Sprite):
         self.velocity = velocity
         self.direction = direction
         self.color = color
+        self.name = name if name is not None else ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         self.image = None
+
+    def __str__(self):
+        return f"Entity '{self.name}'\n" \
+               f"  Mass:    {self.mass:.2f} kg\n" \
+               f"  Density: {self.density:.2f} kg/m³\n" \
+               f"  Radius:  {self.radius:.2f} m"
+
 
     @property
     def radius(self) -> float:

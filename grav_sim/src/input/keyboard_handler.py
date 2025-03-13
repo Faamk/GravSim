@@ -9,7 +9,6 @@ from ..graphics.camera import Camera
 class KeyboardHandler:
     def __init__(self, entities: list[Entity], camera: Camera, time_scale: float):
         self.time_scale = time_scale
-        self.focused_entity: Optional[Entity] = None
         self.entities = entities
         self.camera = camera
 
@@ -31,8 +30,8 @@ class KeyboardHandler:
             index = key - pygame.K_1  # Convert key to 0-based index
             if index < len(self.entities):
                 entity = self.entities[index]
-                self.camera.focus_on(entity.position.x, entity.position.y)
-                self.focused_entity = entity
+                self.camera.entity_to_track = entity
+                print(f"Tracking {entity}")
 
     def _adjust_time_scale(self, increase: bool) -> float:
         """Adjust the time scale up or down"""
