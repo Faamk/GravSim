@@ -29,7 +29,7 @@ class Game:
         )
         self.running = False
 
-    def run(self):
+    def main_loop(self):
         self.running = True
         while self.running:
             self.handle_input()
@@ -66,7 +66,4 @@ class Game:
 
 
     def render(self):
-        self.screen.fill((255, 255, 255))
-        self.renderer.draw(self.screen, self.physics.entities,
-                           self.mouse_handler.creating_entity,
-                           self.keyboard_handler.time_scale)
+        self.renderer.draw(self.screen, self.physics.entities, self.mouse_handler.creating_entity, self.keyboard_handler.time_scale)

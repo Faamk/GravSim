@@ -17,6 +17,7 @@ class Entity(pygame.sprite.Sprite):
     position: Vector2
     density: float
     mass: float
+    realRect: pygame.Rect
     velocity: float = 0
     direction: float = 0
     color: tuple = (255, 0, 0)
@@ -34,6 +35,7 @@ class Entity(pygame.sprite.Sprite):
         self.color = color
         self.name = name if name is not None else ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         self.image = None
+        self._update_real_rect()
 
     def __str__(self):
         return f"Entity '{self.name}'\n" \
@@ -63,12 +65,21 @@ class Entity(pygame.sprite.Sprite):
         distance = (self.position - other.position).length()
         return distance < (self.radius + other.radius)
 
+    def _update_real_rect(self) -> None:
+        self.realRect = pygame.Rect(
+            self.position.x - self.radius,
+            self.position.y - self.radius,
+            self.radius * 2,
+            self.radius * 2
+        )
+
     def move(self, time_scale: float):
         movement = Vector2(
             math.cos(self.direction) * self.velocity * time_scale,
             math.sin(self.direction) * self.velocity * time_scale
         )
         self.position += movement
+        self._update_real_rect()
 
     def get_velocity_vector(self) -> Vector2:
         return Vector2(

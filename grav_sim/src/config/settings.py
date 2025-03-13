@@ -11,6 +11,10 @@ class CameraConfig:
     ZOOM_IN_FACTOR = 0.9
     ZOOM_OUT_FACTOR = 1.1
 
+class RendererConfig:
+    VELOCITY_SCALE = 100
+    BASE_ARROW_LENGTH = 20
+
 
 class BoardConfig:
     WIDTH = 10000

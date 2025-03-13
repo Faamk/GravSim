@@ -3,31 +3,23 @@ from typing import List, Optional
 import math
 from pygame.math import Vector2
 
-from grav_sim.src.config.settings import WindowConfig
+from grav_sim.src.config.settings import WindowConfig, RendererConfig
 from grav_sim.src.core.entity.entity import Entity
-from grav_sim.src.graphics.camera import Camera
 
 
 class Renderer:
     def __init__(self, camera):
         self.font = pygame.font.Font(None, 24)
-        self.BASE_ARROW_LENGTH = 20
-        self.VELOCITY_SCALE = 100
         self.camera = camera
 
-        # Create layers for different rendering purposes
         self.entity_group = pygame.sprite.Group()
         self.overlay_surface = pygame.Surface((200, WindowConfig.HEIGHT), pygame.SRCALPHA)
 
-        # Cache for surfaces
         self.text_cache = {}
 
-    def draw(self, canvas: pygame.Surface, entities: List[Entity],
-             creating_entity: Optional[Entity], time_scale: float) -> None:
-        # Clear canvas
+    def draw(self, canvas: pygame.Surface, entities: List[Entity], creating_entity: Optional[Entity], time_scale: float) -> None:
         canvas.fill((255, 255, 255))
 
-        # Update and draw all entities
         all_entities = entities + ([creating_entity] if creating_entity else [])
         self._update_entities(all_entities)
 
@@ -41,37 +33,41 @@ class Renderer:
         self._draw_overlay(canvas, entities, creating_entity, time_scale)
 
     def _update_entities(self, entities: List[Entity]) -> None:
-        self.entity_group.empty()
+        for entity in self.entity_group:
+            if not entity.realRect.colliderect(self.camera.get_visible_area()):
+                self.entity_group.remove(entity)
 
         for entity in entities:
-            # Calculate render size based on world radius and zoom
-            world_diameter = entity.radius * 2
-            screen_diameter = max(1, round(world_diameter * self.camera.zoom_level))
+            if entity.realRect.colliderect(self.camera.get_visible_area()):
+                world_diameter = entity.radius * 2
+                screen_diameter = max(1, round(world_diameter * self.camera.zoom_level))
 
-            # Create visual surface
-            surface = pygame.Surface((screen_diameter, screen_diameter), pygame.SRCALPHA)
-            pygame.draw.circle(surface, entity.color,
-                             (screen_diameter // 2, screen_diameter // 2),
-                             screen_diameter // 2)
-            entity.image = surface
+                # Create visual surface
+                surface = pygame.Surface((screen_diameter, screen_diameter), pygame.SRCALPHA)
+                pygame.draw.circle(surface, entity.color, (screen_diameter // 2, screen_diameter // 2),
+                                   screen_diameter // 2)
+                entity.image = surface
 
-            # Update sprite rect for rendering only
-            screen_pos = self.camera.world_to_screen_pos(entity.position)
-            entity.rect = pygame.Rect(
-                round(screen_pos.x - (screen_diameter // 2)),
-                round(screen_pos.y - (screen_diameter // 2)),
-                screen_diameter,
-                screen_diameter
-            )
+                screen_pos = self.camera.world_to_screen_pos(entity.position)
+                entity.rect = pygame.Rect(
+                    round(screen_pos.x - (screen_diameter // 2)),
+                    round(screen_pos.y - (screen_diameter // 2)),
+                    screen_diameter,
+                    screen_diameter
+                )
 
-            self.entity_group.add(entity)
+                print(
+                    f"Rendering {entity.name} - Is it in screen? : {entity.realRect.colliderect(self.camera.get_visible_area())}")
+
+                if entity not in self.entity_group:
+                    self.entity_group.add(entity)
 
     def _draw_velocity_arrows(self, canvas: pygame.Surface, entities: List[Entity]) -> None:
         for entity in entities:
             if entity.velocity > 0:
                 screen_pos = self.camera.world_to_screen_pos(entity.position)
-                arrow_length = (self.BASE_ARROW_LENGTH +
-                                (entity.velocity * self.VELOCITY_SCALE)) * self.camera.zoom_level
+                arrow_length = (RendererConfig.BASE_ARROW_LENGTH +
+                                (entity.velocity * RendererConfig.VELOCITY_SCALE)) * self.camera.zoom_level
                 end_point = Vector2(
                     screen_pos.x + math.cos(entity.direction) * arrow_length,
                     screen_pos.y + math.sin(entity.direction) * arrow_length

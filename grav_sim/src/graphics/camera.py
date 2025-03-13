@@ -1,4 +1,5 @@
 import pygame
+from pygame import Rect
 from pygame.math import Vector2
 from grav_sim.src.config.settings import WindowConfig, BoardConfig
 from grav_sim.src.core.entity.entity import Entity
@@ -34,10 +35,10 @@ class Camera:
         world_pos = (relative_to_center / self.zoom_level) + self.position
         return world_pos
 
-    def get_visible_area(self) -> tuple[Vector2, Vector2]:
-        top_left = self.screen_to_world_pos(Vector2(CameraConfig.STARTING_X, CameraConfig.STARTING_Y))
-        bottom_right = self.screen_to_world_pos(Vector2(self.viewport.width, self.viewport.height))
-        return top_left, bottom_right
+    def get_visible_area(self) -> Rect:
+        top_left = self.screen_to_world_pos(Vector2(self.viewport.topleft))
+        return Rect(top_left.x, top_left.y, self.viewport.width / self.zoom_level,
+                    self.viewport.height / self.zoom_level)
 
     def update(self) -> None:
         if self.entity_to_track:
