@@ -3,7 +3,7 @@ from typing import List, Optional
 import math
 from pygame.math import Vector2
 
-from grav_sim.src.config.settings import WindowConfig
+from grav_sim.src.config.settings import WindowConfig, BoardConfig
 from grav_sim.src.core.entity.entity import Entity
 from grav_sim.src.graphics.camera import Camera
 
@@ -15,8 +15,10 @@ class Renderer:
         self.VELOCITY_SCALE = 100
         self.camera = Camera()
 
-        # Create layers for different rendering purposes
-        self.entity_group = pygame.sprite.Group()
+        # Create the world surface with BoardConfig dimensions
+        self.world_surface = pygame.Surface((BoardConfig.WIDTH, BoardConfig.HEIGHT))
+
+        # Create overlay surface for UI elements
         self.overlay_surface = pygame.Surface((200, WindowConfig.HEIGHT), pygame.SRCALPHA)
 
         # Cache for surfaces
@@ -24,60 +26,47 @@ class Renderer:
 
     def draw(self, canvas: pygame.Surface, entities: List[Entity],
              creating_entity: Optional[Entity], time_scale: float) -> None:
-        # Clear canvas
-        canvas.fill((255, 255, 255))
+        # Clear world surface
+        self.world_surface.fill((255, 255, 255))
 
-        # Update and draw all entities
+        # Draw all entities to world surface
         all_entities = entities + ([creating_entity] if creating_entity else [])
-        self._update_entities(all_entities)
+        self._draw_entities(self.world_surface, all_entities)
+        self._draw_velocity_arrows(self.world_surface, all_entities)
 
-        # Draw entities
-        self.entity_group.draw(canvas)
+        # Apply camera transform to world surface and draw to canvas
+        transformed_surface = self.camera.apply_to_surface(self.world_surface)
+        canvas.blit(transformed_surface, (0, 0))
 
-        # Draw velocity arrows
-        self._draw_velocity_arrows(canvas, all_entities)
-
-        # Draw overlay
+        # Draw overlay (UI elements) directly to canvas
         self._draw_overlay(canvas, entities, creating_entity, time_scale)
 
-    def _update_entities(self, entities: List[Entity]) -> None:
-        self.entity_group.empty()
-
+    def _draw_entities(self, surface: pygame.Surface, entities: List[Entity]) -> None:
         for entity in entities:
-            # Calculate render size based on world radius and zoom
-            world_diameter = entity.radius * 2
-            screen_diameter = max(1, round(world_diameter * self.camera.zoom_level))
-
-            # Create visual surface
-            surface = pygame.Surface((screen_diameter, screen_diameter), pygame.SRCALPHA)
-            pygame.draw.circle(surface, entity.color,
-                             (screen_diameter // 2, screen_diameter // 2),
-                             screen_diameter // 2)
-            entity.image = surface
-
-            # Update sprite rect for rendering only
+            # Convert world position to screen position
             screen_pos = self.camera.world_to_screen_pos(entity.position)
-            entity.rect = pygame.Rect(
-                round(screen_pos.x - (screen_diameter // 2)),
-                round(screen_pos.y - (screen_diameter // 2)),
-                screen_diameter,
-                screen_diameter
+
+            # Scale radius based on zoom
+            radius = max(1, round(entity.radius))
+
+            pygame.draw.circle(
+                surface,
+                entity.color,
+                (int(screen_pos.x), int(screen_pos.y)),
+                radius
             )
 
-            self.entity_group.add(entity)
-
-    def _draw_velocity_arrows(self, canvas: pygame.Surface, entities: List[Entity]) -> None:
+    def _draw_velocity_arrows(self, surface: pygame.Surface, entities: List[Entity]) -> None:
         for entity in entities:
             if entity.velocity > 0:
-                screen_pos = self.camera.world_to_screen_pos(entity.position)
-                arrow_length = (self.BASE_ARROW_LENGTH +
-                                (entity.velocity * self.VELOCITY_SCALE)) * self.camera.zoom_level
-                end_point = Vector2(
-                    screen_pos.x + math.cos(entity.direction) * arrow_length,
-                    screen_pos.y + math.sin(entity.direction) * arrow_length
+                start_pos = entity.position
+                arrow_length = self.BASE_ARROW_LENGTH + (entity.velocity * self.VELOCITY_SCALE)
+                end_pos = Vector2(
+                    start_pos.x + math.cos(entity.direction) * arrow_length,
+                    start_pos.y + math.sin(entity.direction) * arrow_length
                 )
-                pygame.draw.line(canvas, (0, 255, 0), screen_pos, end_point, 2)
-                self._draw_arrow_head(canvas, end_point, entity.direction, (0, 255, 0))
+                pygame.draw.line(surface, (0, 255, 0), start_pos, end_pos, 2)
+                self._draw_arrow_head(surface, end_pos, entity.direction, (0, 255, 0))
 
     def _draw_overlay(self, canvas: pygame.Surface, entities: List[Entity],
                       creating_entity: Optional[Entity], time_scale: float) -> None:
