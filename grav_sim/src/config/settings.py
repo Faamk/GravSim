@@ -2,6 +2,15 @@ class WindowConfig:
     WIDTH = 1000
     HEIGHT = 1000
 
+class CameraConfig:
+    MIN_ZOOM = 0.01
+    MAX_ZOOM = 10.0
+    STARTING_ZOOM_LEVEL = 1
+    STARTING_X = 0
+    STARTING_Y = 0
+    ZOOM_IN_FACTOR = 0.9
+    ZOOM_OUT_FACTOR = 1.1
+
 
 class BoardConfig:
     WIDTH = 10000

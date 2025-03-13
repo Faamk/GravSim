@@ -61,11 +61,12 @@ class Game:
                 self.mouse_handler.handle_click(x, y, 0, self.renderer.camera)
 
     def update(self):
-        self.physics.update(self.keyboard_handler.current_time_scale)
+        self.physics.update(self.keyboard_handler.time_scale)
         self.camera.update()
+
 
     def render(self):
         self.screen.fill((255, 255, 255))
         self.renderer.draw(self.screen, self.physics.entities,
                            self.mouse_handler.creating_entity,
-                           self.keyboard_handler.current_time_scale)
+                           self.keyboard_handler.time_scale)
