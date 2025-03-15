@@ -1,13 +1,8 @@
-from dataclasses import dataclass
-from typing import List
-
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple, Dict
 from pygame.math import Vector2
 import pygame
 import math
-
-import pygame
-from pygame.math import Vector2
-from dataclasses import dataclass, field
 import random
 import string
 
@@ -21,11 +16,12 @@ class Entity(pygame.sprite.Sprite):
     velocity: float = 0
     direction: float = 0
     color: tuple = (255, 0, 0)
+    draw_velocity: bool = False
     name: str = field(default_factory=lambda: ''.join(random.choices(string.ascii_letters + string.digits, k=8)))
 
     def __init__(self, position: Vector2, density: float, mass: float,
                  velocity: float = 0, direction: float = 0,
-                 color: tuple = (255, 0, 0), name: str = None):
+                 color: tuple = (255, 0, 0), name: str = None, draw_velocity: bool = False):
         super().__init__()
         self.position = position
         self.density = density
@@ -35,7 +31,46 @@ class Entity(pygame.sprite.Sprite):
         self.color = color
         self.name = name if name is not None else ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         self.image = None
+        self.draw_velocity = draw_velocity
         self._update_real_rect()
+
+    def __getstate__(self) -> Dict:
+        """Return a picklable state dictionary"""
+        state = {
+            'position': (self.position.x, self.position.y),
+            'density': self.density,
+            'mass': self.mass,
+            'velocity': self.velocity,
+            'direction': self.direction,
+            'color': self.color,
+            'draw_velocity': self.draw_velocity,
+            'name': self.name,
+            'rect': (self.realRect.x, self.realRect.y, self.realRect.width, self.realRect.height)
+        }
+        return state
+
+    def __setstate__(self, state: Dict) -> None:
+        """Restore instance from pickled state"""
+        # Initialize parent Sprite class
+        pygame.sprite.Sprite.__init__(self)
+
+        # Restore Vector2 position
+        self.position = Vector2(*state['position'])
+
+        # Restore simple attributes
+        self.density = state['density']
+        self.mass = state['mass']
+        self.velocity = state['velocity']
+        self.direction = state['direction']
+        self.color = state['color']
+        self.draw_velocity = state['draw_velocity']
+        self.name = state['name']
+
+        # Restore Rect
+        self.realRect = pygame.Rect(*state['rect'])
+
+        # Initialize image as None (will be recreated when needed)
+        self.image = None
 
     def __str__(self):
         return f"Entity '{self.name}'\n" \
@@ -48,23 +83,6 @@ class Entity(pygame.sprite.Sprite):
     def radius(self) -> float:
         return math.sqrt(self.mass / (self.density * math.pi))
 
-    def check_collisions(self, entities: List['Entity']) -> None:
-        for other in entities[:]:  # Create a copy of list to safely modify it
-            if other is self:
-                continue
-
-            if not self.collide(other):
-                continue
-
-            if self.mass >= other.mass:
-                self.consume(other)
-                entities.remove(other)
-
-    def collide(self, other: 'Entity') -> bool:
-        """Check if this entity collides with another entity"""
-        distance = (self.position - other.position).length()
-        return distance < (self.radius + other.radius)
-
     def _update_real_rect(self) -> None:
         self.realRect = pygame.Rect(
             self.position.x - self.radius,
@@ -73,12 +91,9 @@ class Entity(pygame.sprite.Sprite):
             self.radius * 2
         )
 
-    def move(self, time_scale: float):
-        movement = Vector2(
-            math.cos(self.direction) * self.velocity * time_scale,
-            math.sin(self.direction) * self.velocity * time_scale
-        )
-        self.position += movement
+    def move(self, x: float, y: float) -> None:
+        self.position.x = x
+        self.position.y = y
         self._update_real_rect()
 
     def get_velocity_vector(self) -> Vector2:

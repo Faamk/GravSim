@@ -3,9 +3,9 @@ class WindowConfig:
     HEIGHT = 1000
 
 class CameraConfig:
-    MIN_ZOOM = 0.01
-    MAX_ZOOM = 10.0
-    STARTING_ZOOM_LEVEL = 1
+    MIN_ZOOM = 0.005
+    MAX_ZOOM = 100.0
+    STARTING_ZOOM_LEVEL = 0.01
     STARTING_X = 0
     STARTING_Y = 0
     ZOOM_IN_FACTOR = 0.9
@@ -17,8 +17,8 @@ class RendererConfig:
 
 
 class BoardConfig:
-    WIDTH = 10000
-    HEIGHT = 10000
+    WIDTH = 100000
+    HEIGHT = 100000
 
 
 class PhysicsConfig:

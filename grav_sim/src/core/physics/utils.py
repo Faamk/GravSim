@@ -1,4 +1,5 @@
 import math
+import random
 from pygame.math import Vector2
 from grav_sim.src.config.settings import PhysicsConfig, BoardConfig
 from grav_sim.src.core.entity.entity import Entity
@@ -66,3 +67,34 @@ def create_default_entities() -> List[Entity]:
     )
 
     return [sun, earth, moon]
+
+
+def create_random_entities(num_entities: int, max_mass: float = 1000, max_velocity: float = 10) -> List[Entity]:
+    entities = []
+    
+    # Create random entities
+    for i in range(num_entities - 1):
+        # Random position across the board
+        pos = Vector2(
+            random.uniform(0, BoardConfig.WIDTH),
+            random.uniform(0, BoardConfig.HEIGHT)
+        )
+        
+        # Random RGB color
+        color = (
+            random.randint(50, 255),
+            random.randint(50, 255),
+            random.randint(50, 255)
+        )
+        
+        entities.append(Entity(
+            name=f"Entity_{i}",
+            position=pos,
+            density=0.141,
+            mass=random.uniform(10, max_mass),
+            velocity=random.uniform(0, max_velocity),
+            direction=random.uniform(0, 2 * math.pi),  # Random direction in radians
+            color=color
+        ))
+    
+    return entities

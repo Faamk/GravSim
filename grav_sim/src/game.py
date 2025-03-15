@@ -3,7 +3,7 @@ import pygame
 from grav_sim.src.config import settings
 from grav_sim.src.config.settings import WindowConfig, PhysicsConfig
 from grav_sim.src.core.physics.physics import PhysicsEngine
-from grav_sim.src.core.physics.utils import create_default_entities
+from grav_sim.src.core.physics.utils import create_random_entities, create_default_entities
 from grav_sim.src.graphics.camera import Camera
 from grav_sim.src.graphics.renderer import Renderer
 from grav_sim.src.input.keyboard_handler import KeyboardHandler
@@ -13,13 +13,14 @@ from grav_sim.src.input.mouse_handler import MouseHandler
 class Game:
     def __init__(self):
         pygame.init()
-        self.entities = create_default_entities()
+        self.entities = create_random_entities(num_entities=5000, max_mass=10000, max_velocity=3)
+        #self.entities = create_default_entities()
         self.timescale = PhysicsConfig.DEFAULT_TIME_SCALE
         self.screen = pygame.display.set_mode((WindowConfig.WIDTH, WindowConfig.HEIGHT))
         pygame.display.set_caption("Gravity Simulator")
 
         self.physics = PhysicsEngine(self.entities)
-        self.camera = Camera(entity_to_track=self.entities[0])
+        self.camera = Camera(entity_to_track=None)
         self.renderer = Renderer(camera=self.camera)
         self.mouse_handler = MouseHandler()
         self.keyboard_handler = KeyboardHandler(
@@ -31,11 +32,30 @@ class Game:
 
     def main_loop(self):
         self.running = True
+        clock = pygame.time.Clock()
         while self.running:
+            frame_start = pygame.time.get_ticks()
+            
+            input_start = pygame.time.get_ticks()
             self.handle_input()
+            input_time = pygame.time.get_ticks() - input_start
+            
+            update_start = pygame.time.get_ticks()
             self.update()
+            update_time = pygame.time.get_ticks() - update_start
+            
+            render_start = pygame.time.get_ticks()
             self.render()
             pygame.display.flip()
+            render_time = pygame.time.get_ticks() - render_start
+            
+            total_frame_time = pygame.time.get_ticks() - frame_start
+            
+            print(f"Frame timing (ms): Input: {input_time}, Update: {update_time}, Render: {render_time}, Total: {total_frame_time}")
+            
+            # Cap at 60 FPS
+            clock.tick(60)
+            
         pygame.quit()
 
     def handle_input(self):
@@ -55,7 +75,8 @@ class Game:
                 else:
                     entity = self.mouse_handler.handle_click(x, y, button, self.renderer.camera)
                     if entity:
-                        self.physics.entities.append(entity)
+                        entity.draw_velocity = False
+                        self.physics.entities[entity.name] = entity
             elif event.type == pygame.MOUSEMOTION and self.mouse_handler.mouse_held:
                 x, y = pygame.mouse.get_pos()
                 self.mouse_handler.handle_click(x, y, 0, self.renderer.camera)
@@ -64,6 +85,6 @@ class Game:
         self.physics.update(self.keyboard_handler.time_scale)
         self.camera.update()
 
-
     def render(self):
-        self.renderer.draw(self.screen, self.physics.entities, self.mouse_handler.creating_entity, self.keyboard_handler.time_scale)
+        self.renderer.draw(self.screen, list(self.physics.entities.values()), self.mouse_handler.creating_entity,
+                           self.keyboard_handler.time_scale)

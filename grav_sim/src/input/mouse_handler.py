@@ -27,7 +27,8 @@ class MouseHandler:
                 mass=self.mass,
                 velocity=0,
                 direction=0,
-                color=(0, 0, 255)
+                color=(0, 0, 255),
+                draw_velocity=True
             )
         elif button == 0 and self.mouse_held:  # Mouse motion while held
             if self.creating_entity:
