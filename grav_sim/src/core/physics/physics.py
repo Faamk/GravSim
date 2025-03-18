@@ -1,5 +1,7 @@
 import math
 from typing import List, Tuple, Union
+
+import pygame
 from pygame.math import Vector2
 from pygame import Rect
 from grav_sim.src.config.settings import PhysicsConfig, BoardConfig
@@ -125,7 +127,14 @@ class PhysicsEngine:
         return colliding_pairs
 
     def _check_collision(self, entity1: Entity, entity2: Entity) -> bool:
-        return  entity1.realRect.colliderect(entity2.realRect)
+        mask1 = pygame.mask.from_surface(entity1.collision_mask)
+        mask2 = pygame.mask.from_surface(entity2.collision_mask)
+
+        offset_x = int(entity2.position.x - entity1.position.x)
+        offset_y = int(entity2.position.y - entity1.position.y)
+
+        return mask1.overlap(mask2, (offset_x, offset_y)) is not None
+
 
 
     def handle_collisions(self):

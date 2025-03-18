@@ -1,6 +1,8 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Dict
+
+from pygame import Rect, Vector2
 from pygame.math import Vector2
 import pygame
 import math
@@ -12,10 +14,8 @@ import string
 class Entity(pygame.sprite.Sprite):
     position: Vector2
     old_position: Vector2
-    collision_path : List[tuple[float,float]]
     density: float
     mass: float
-    realRect: pygame.Rect
     velocity: float = 0
     direction: float = 0
     color: tuple = (255, 0, 0)
@@ -36,12 +36,8 @@ class Entity(pygame.sprite.Sprite):
         self.name = name if name is not None else ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         self.image = None
         self.draw_velocity = draw_velocity
-        self._update_real_rect()
-        self.prev_rect = self.realRect
-        self.collision_path = []
 
     def __getstate__(self) -> Dict:
-        """Return a picklable state dictionary"""
         state = {
             'position': (self.position.x, self.position.y),
             'old_position': (self.old_position.x, self.old_position.y),
@@ -52,21 +48,15 @@ class Entity(pygame.sprite.Sprite):
             'color': self.color,
             'draw_velocity': self.draw_velocity,
             'name': self.name,
-            'rect': (self.realRect.x, self.realRect.y, self.realRect.width, self.realRect.height),
-            'collision_path': self.collision_path,  # Store the collision_path as a list of points
         }
         return state
 
     def __setstate__(self, state: Dict) -> None:
-        """Restore instance from pickled state"""
-        # Initialize parent Sprite class
         pygame.sprite.Sprite.__init__(self)
 
-        # Restore Vector2 position
         self.position = Vector2(*state['position'])
         self.old_position = Vector2(*state['old_position'])
 
-        # Restore simple attributes
         self.density = state['density']
         self.mass = state['mass']
         self.velocity = state['velocity']
@@ -74,17 +64,6 @@ class Entity(pygame.sprite.Sprite):
         self.color = state['color']
         self.draw_velocity = state['draw_velocity']
         self.name = state['name']
-
-        # Restore Rect
-        self.realRect = pygame.Rect(*state['rect'])
-
-        # Restore the collision_path as a list of points
-        self.collision_path = state['collision_path']
-
-        # Recalculate the rectangle if necessary
-        self._update_real_rect()
-
-        # Initialize image as None (will be recreated when needed)
         self.image = None
 
     def __str__(self):
@@ -98,20 +77,68 @@ class Entity(pygame.sprite.Sprite):
     def radius(self) -> float:
         return math.sqrt(self.mass / (self.density * math.pi))
 
-    def _update_real_rect(self) -> None:
-        self.realRect = pygame.Rect(
+    @property
+    def realRect(self) -> Rect:
+        return pygame.Rect(
             self.position.x - self.radius,
             self.position.y - self.radius,
             self.radius * 2,
             self.radius * 2
         )
 
+    @property
+    def oldRect(self) -> Rect:
+        return pygame.Rect(
+            self.old_position.x - self.radius,
+            self.old_position.y - self.radius,
+            self.radius * 2,
+            self.radius * 2
+        )
+
+    @property
+    def collision_path(self) -> list[Vector2]:
+        displacement = self.position - self.old_position
+        length = max(displacement.length(), 0.001)
+        direction = displacement / length
+
+        perp_direction = Vector2(-direction.y, direction.x)
+        perp_direction *= self.radius * 2
+
+        start_offset = self.old_position + perp_direction
+        end_offset = self.position + perp_direction
+        start_neg_offset = self.old_position - perp_direction
+        end_neg_offset = self.position - perp_direction
+
+        return [start_offset, end_offset, end_neg_offset, start_neg_offset]
+
+    @property
+    def collision_mask(self) -> pygame.Surface:
+        # Create a surface to draw the collision mask
+        mask_surface = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
+
+        # Draw a circle for the current position (centered at self.position)
+        pygame.draw.circle(mask_surface, self.color,
+                           (self.position.x - self.position.x + self.radius,
+                            self.position.y - self.position.y + self.radius),
+                           self.radius)
+
+        # Draw a circle for the old position (centered at self.old_position)
+        pygame.draw.circle(mask_surface, self.color,
+                           (self.old_position.x - self.old_position.x + self.radius,
+                            self.old_position.y - self.old_position.y + self.radius),
+                           self.radius)
+
+        # Draw the path of movement (collision path) as an outline
+        path_points = self.collision_path
+        pygame.draw.polygon(mask_surface, self.color, path_points, 1)
+
+        return mask_surface
+
     def move(self, x: float, y: float) -> None:
         self.old_position = deepcopy(self.position)
         self.position.x = x
         self.position.y = y
-        self._update_real_rect()
-        self.set_collision_path()
+
     def get_velocity_vector(self) -> Vector2:
         return Vector2(
             math.cos(self.direction) * self.velocity,
@@ -121,28 +148,18 @@ class Entity(pygame.sprite.Sprite):
     def consume(self, other: 'Entity') -> None:
         self.mass = self.mass + other.mass
 
-    def set_collision_path(self) -> None:
-        dx = self.position.x - self.old_position.x
-        dy = self.position.y - self.old_position.y
-        length = max(math.sqrt(dx ** 2 + dy ** 2), 0.001)
+    def draw(self, canvas, camera, show_old):
+        screen_size = camera.world_to_screen_radius(self.radius)
+        screen_position = camera.world_to_screen_pos(self.position)
 
-        dx /= length
-        dy /= length
+        if show_old:
+            pygame.draw.circle(canvas, self.color,  camera.world_to_screen_pos(self.old_position), screen_size, 1)
+            path_points = [camera.world_to_screen_pos(point) for point in self.collision_path]
+            pygame.draw.polygon(canvas, self.color, path_points, 1),
 
-        # Perpendicular direction to the motion vector
-        perp_dx = -dy
-        perp_dy = dx
-
-        # Scale the perpendicular vector by the radius
-        perp_dx *= self.radius
-        perp_dy *= self.radius
-
-        # Define the four points that make up the collision path
-        rect_start_1 = (self.old_position.x + perp_dx, self.old_position.y + perp_dy)
-        rect_end_1 = (self.position.x + perp_dx, self.position.y + perp_dy)
-        rect_start_2 = (self.old_position.x - perp_dx, self.old_position.y - perp_dy)
-        rect_end_2 = (self.position.x - perp_dx, self.position.y - perp_dy)
-
-        self.collision_path = [rect_start_1, rect_end_1, rect_end_2, rect_start_2]
+        if screen_size == 1:
+            canvas.set_at((round(screen_position.x), round(screen_position.y)), self.color)
+        else:
+            pygame.draw.circle(canvas, self.color, screen_position, screen_size)
 
 

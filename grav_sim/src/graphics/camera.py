@@ -30,6 +30,9 @@ class Camera:
                                                                                     self.viewport.height / 2)
         return screen_pos
 
+    def world_to_screen_radius(self, radius: float) -> float:
+        return max(1, round(radius * 2 * self.zoom_level))
+
     def screen_to_world_pos(self, screen_pos: Vector2) -> Vector2:
         relative_to_center = screen_pos - Vector2(self.viewport.width / 2, self.viewport.height / 2)
         world_pos = (relative_to_center / self.zoom_level) + self.position

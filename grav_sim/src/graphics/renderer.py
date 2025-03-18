@@ -57,40 +57,8 @@ class Renderer:
 
     def _draw_entities(self, canvas: pygame.Surface, entities: List[Entity]) -> None:
         for entity in entities:
-            if not entity.realRect.colliderect(self.camera.get_visible_area()):
-                continue
-
-            world_diameter = entity.radius * 2
-            screen_diameter = max(1, round(world_diameter * self.camera.zoom_level))
-            screen_pos = self.camera.world_to_screen_pos(entity.position)
-            old_screen_pos = self.camera.world_to_screen_pos(entity.old_position)
-            direction = pygame.Vector2(screen_pos - old_screen_pos).normalize()
-
-            to_render = entity.collision_path
-
-            scaled_points = []
-            for point in to_render:
-                self.camera.world_to_screen_pos(point)
-                scaled_points.append(self.camera.world_to_screen_pos(point))
-
-            pygame.draw.polygon(canvas, entity.color, scaled_points)
-
-            if screen_diameter == 1:
-                canvas.set_at((round(screen_pos.x), round(screen_pos.y)), entity.color)
-                canvas.set_at((round(screen_pos.x), round(old_screen_pos.y)), entity.color)
-            else:
-                pygame.draw.circle(
-                    canvas,
-                    entity.color,
-                    (round(screen_pos.x), round(screen_pos.y)),
-                    round(screen_diameter / 2)
-                )
-                pygame.draw.circle(
-                    canvas,
-                    entity.color,
-                    (round(old_screen_pos.x), round(old_screen_pos.y)),
-                    round(screen_diameter / 2)
-                )
+            if entity.realRect.colliderect(self.camera.get_visible_area()):
+                entity.draw(canvas,self.camera,show_old=True)
 
     def _draw_velocity_arrows(self, canvas: pygame.Surface, entities: List[Entity]) -> None:
         for entity in entities:
