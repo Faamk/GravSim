@@ -7,6 +7,39 @@ from grav_sim.src.config.settings import WindowConfig, RendererConfig
 from grav_sim.src.core.entity.entity import Entity
 
 
+import pygame
+import math
+
+def draw_perpendicular_lines(canvas, start, end, n, color):
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    length = max(math.sqrt(dx ** 2 + dy ** 2), 0.001)
+
+    dx /= length
+    dy /= length
+
+    perp_dx = -dy
+    perp_dy = dx
+
+    perp_dx *= n
+    perp_dy *= n
+
+
+    rect_start_1 = (start[0] + perp_dx, start[1] + perp_dy)
+    rect_end_1 = (end[0] + perp_dx, end[1] + perp_dy)
+    rect_start_2 = (start[0] - perp_dx, start[1] - perp_dy)
+    rect_end_2 = (end[0] - perp_dx, end[1] - perp_dy)
+
+    # Draw the rectangle using the four corners
+    pygame.draw.polygon(
+        canvas,
+        color,
+        [rect_start_1, rect_end_1, rect_end_2, rect_start_2],
+        1  # Line thickness
+    )
+
+
+
 class Renderer:
     def __init__(self, camera):
         self.font = pygame.font.Font(None, 24)
@@ -30,14 +63,32 @@ class Renderer:
             world_diameter = entity.radius * 2
             screen_diameter = max(1, round(world_diameter * self.camera.zoom_level))
             screen_pos = self.camera.world_to_screen_pos(entity.position)
+            old_screen_pos = self.camera.world_to_screen_pos(entity.old_position)
+            direction = pygame.Vector2(screen_pos - old_screen_pos).normalize()
+
+            to_render = entity.collision_path
+
+            scaled_points = []
+            for point in to_render:
+                self.camera.world_to_screen_pos(point)
+                scaled_points.append(self.camera.world_to_screen_pos(point))
+
+            pygame.draw.polygon(canvas, entity.color, scaled_points)
 
             if screen_diameter == 1:
                 canvas.set_at((round(screen_pos.x), round(screen_pos.y)), entity.color)
+                canvas.set_at((round(screen_pos.x), round(old_screen_pos.y)), entity.color)
             else:
                 pygame.draw.circle(
                     canvas,
                     entity.color,
                     (round(screen_pos.x), round(screen_pos.y)),
+                    round(screen_diameter / 2)
+                )
+                pygame.draw.circle(
+                    canvas,
+                    entity.color,
+                    (round(old_screen_pos.x), round(old_screen_pos.y)),
                     round(screen_diameter / 2)
                 )
 

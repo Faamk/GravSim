@@ -1,6 +1,5 @@
 import pygame
 
-from grav_sim.src.config import settings
 from grav_sim.src.config.settings import WindowConfig, PhysicsConfig
 from grav_sim.src.core.physics.physics import PhysicsEngine
 from grav_sim.src.core.physics.utils import create_random_entities, create_default_entities
@@ -8,13 +7,15 @@ from grav_sim.src.graphics.camera import Camera
 from grav_sim.src.graphics.renderer import Renderer
 from grav_sim.src.input.keyboard_handler import KeyboardHandler
 from grav_sim.src.input.mouse_handler import MouseHandler
+import pygame_menu
+
+from grav_sim.src.menu.option_menu import OptionsMenu, Scenario
 
 
 class Game:
     def __init__(self):
         pygame.init()
-        self.entities = create_random_entities(num_entities=5000, max_mass=10000, max_velocity=3)
-        #self.entities = create_default_entities()
+        self.entities = create_default_entities()
         self.timescale = PhysicsConfig.DEFAULT_TIME_SCALE
         self.screen = pygame.display.set_mode((WindowConfig.WIDTH, WindowConfig.HEIGHT))
         pygame.display.set_caption("Gravity Simulator")
@@ -29,33 +30,44 @@ class Game:
             time_scale=self.timescale,
         )
         self.running = False
+        self.menu = OptionsMenu(self.set_scenario, self.start_game)
+
+
+    def set_scenario(self, value, scenario):
+        self.physics = PhysicsEngine(Scenario[scenario].value)
+
+
+    def start_game(self):
+        self.menu.disable()  # Disable the menu
+        self.main_loop()  # Start the main game loop
+
+    def menu_loop(self):
+        self.menu.mainloop(self.screen)
+        self.main_loop()
 
     def main_loop(self):
         self.running = True
-        clock = pygame.time.Clock()
         while self.running:
             frame_start = pygame.time.get_ticks()
-            
+
             input_start = pygame.time.get_ticks()
             self.handle_input()
             input_time = pygame.time.get_ticks() - input_start
-            
+
             update_start = pygame.time.get_ticks()
             self.update()
             update_time = pygame.time.get_ticks() - update_start
-            
+
             render_start = pygame.time.get_ticks()
             self.render()
             pygame.display.flip()
             render_time = pygame.time.get_ticks() - render_start
-            
+
             total_frame_time = pygame.time.get_ticks() - frame_start
-            
+
             print(f"Frame timing (ms): Input: {input_time}, Update: {update_time}, Render: {render_time}, Total: {total_frame_time}")
-            
-            # Cap at 60 FPS
-            clock.tick(60)
-            
+
+
         pygame.quit()
 
     def handle_input(self):
@@ -83,7 +95,7 @@ class Game:
 
     def update(self):
         self.physics.update(self.keyboard_handler.time_scale)
-        self.camera.update()
+        self.camera.update(self.physics.entities)
 
     def render(self):
         self.renderer.draw(self.screen, list(self.physics.entities.values()), self.mouse_handler.creating_entity,

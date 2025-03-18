@@ -6,11 +6,12 @@ from grav_sim.src.core.entity.entity import Entity
 from typing import List
 
 
-def create_entity_orbit_at_radius(name: str, orbit_radius: float, mass: float, color: tuple,
-                                  central_body: Entity) -> Entity:
+def create_entity_orbit_at_radius(name: str, orbit_radius: float, mass: float, color: tuple, central_body: Entity) -> Entity:
+    angle_offset = random.uniform(0, 2 * math.pi)
+
     pos = Vector2(
-        central_body.position.x + orbit_radius,
-        central_body.position.y
+        central_body.position.x + orbit_radius * math.cos(angle_offset),
+        central_body.position.y + orbit_radius * math.sin(angle_offset)
     )
 
     orbital_velocity = math.sqrt(
@@ -22,7 +23,7 @@ def create_entity_orbit_at_radius(name: str, orbit_radius: float, mass: float, c
         math.sin(central_body.direction) * central_body.velocity
     )
 
-    orbital_velocity_vector = Vector2(0, orbital_velocity)
+    orbital_velocity_vector = Vector2(-math.sin(angle_offset), math.cos(angle_offset)) * orbital_velocity
     total_velocity_vector = orbital_velocity_vector + parent_velocity
 
     final_velocity = total_velocity_vector.length()
@@ -37,7 +38,6 @@ def create_entity_orbit_at_radius(name: str, orbit_radius: float, mass: float, c
         direction=final_direction,
         color=color
     )
-
 
 def create_default_entities() -> List[Entity]:
     sun = Entity(
@@ -71,30 +71,76 @@ def create_default_entities() -> List[Entity]:
 
 def create_random_entities(num_entities: int, max_mass: float = 1000, max_velocity: float = 10) -> List[Entity]:
     entities = []
-    
-    # Create random entities
+
+    sun = Entity(
+        name="Sun",
+        position=Vector2(BoardConfig.WIDTH / 2, BoardConfig.HEIGHT / 2),
+        density=0.141,
+        mass=333000,
+        velocity=0.0,
+        direction=0,
+        color=(255, 215, 0)
+    )
+
+    entities.append(sun),
+
     for i in range(num_entities - 1):
-        # Random position across the board
-        pos = Vector2(
-            random.uniform(0, BoardConfig.WIDTH),
-            random.uniform(0, BoardConfig.HEIGHT)
-        )
-        
-        # Random RGB color
+        orbit_radius = random.uniform(10000, 80000)  # Random orbital radius
+
+        mass = random.uniform(10, max_mass)
+
         color = (
             random.randint(50, 255),
             random.randint(50, 255),
             random.randint(50, 255)
         )
-        
-        entities.append(Entity(
+
+        entities.append(create_entity_orbit_at_radius(
             name=f"Entity_{i}",
-            position=pos,
-            density=0.141,
-            mass=random.uniform(10, max_mass),
-            velocity=random.uniform(0, max_velocity),
-            direction=random.uniform(0, 2 * math.pi),  # Random direction in radians
-            color=color
+            orbit_radius=orbit_radius,
+            mass=mass,
+            color=color,
+            central_body=sun
         ))
-    
+
     return entities
+
+def create_collision_test_entities() -> List[Entity]:
+    # Create a very dense sun-like entity in the center
+    sun = Entity(
+        name="Sun",
+        position=Vector2(BoardConfig.WIDTH / 2, BoardConfig.HEIGHT / 2),
+        density=0.141,
+        mass=100000,
+        velocity=0.0,
+        direction=0,
+        color=(255, 215, 0)
+    )
+
+    # Create three close orbiting entities with very large masses
+    entity_1 = create_entity_orbit_at_radius(
+        name="Entity_1",
+        orbit_radius=2000,  # Extremely close orbit
+        mass=1000,
+        color=(255, 0, 0),  # Red
+        central_body=sun
+    )
+
+    entity_2 = create_entity_orbit_at_radius(
+        name="Entity_2",
+        orbit_radius=2500,  # Extremely close orbit
+        mass=1000,
+        color=(0, 255, 0),  # Green
+        central_body=sun
+    )
+
+    entity_3 = create_entity_orbit_at_radius(
+        name="Entity_3",
+        orbit_radius=3000,  # Extremely close orbit
+        mass=1000,
+        color=(0, 0, 255),  # Blue
+        central_body=sun
+    )
+
+    # Return the entities as a list
+    return [sun, entity_1, entity_2, entity_3]

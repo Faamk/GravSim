@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect
 from pygame.math import Vector2
-from grav_sim.src.config.settings import WindowConfig, BoardConfig
+from grav_sim.src.config.settings import BoardConfig
 from grav_sim.src.core.entity.entity import Entity
 
 
@@ -40,8 +40,9 @@ class Camera:
         return Rect(top_left.x, top_left.y, self.viewport.width / self.zoom_level,
                     self.viewport.height / self.zoom_level)
 
-    def update(self) -> None:
+    def update(self, entities) -> None:
         if self.entity_to_track:
+            self.entity_to_track = entities[self.entity_to_track.name]
             self.focus_on(self.entity_to_track.position.x, self.entity_to_track.position.y)
 
 

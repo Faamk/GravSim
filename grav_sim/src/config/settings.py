@@ -3,7 +3,7 @@ class WindowConfig:
     HEIGHT = 1000
 
 class CameraConfig:
-    MIN_ZOOM = 0.005
+    MIN_ZOOM = 5e-5
     MAX_ZOOM = 100.0
     STARTING_ZOOM_LEVEL = 0.01
     STARTING_X = 0

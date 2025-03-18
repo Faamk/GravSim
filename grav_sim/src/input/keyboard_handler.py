@@ -18,7 +18,7 @@ class KeyboardHandler:
         actions = {
             pygame.K_PERIOD: self._increase_time_scale,
             pygame.K_COMMA: self._decrease_time_scale,
-            pygame.K_SPACE: self._pause_game
+            pygame.K_SPACE: self._pause_game,
         }
 
         if key in actions:
@@ -36,6 +36,8 @@ class KeyboardHandler:
         self.time_scale = 0.0
 
     def _track_entity(self, key: int) -> None:
+        entity_keys = list(self.entities.keys())
         index = key - pygame.K_1
-        if index < len(self.entities):
-            self.camera.entity_to_track = self.entities[index]
+        if 0 <= index < len(entity_keys):
+            entity_key = entity_keys[index]
+            self.camera.entity_to_track = self.entities[entity_key]
